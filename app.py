@@ -1,19 +1,18 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
-import torch
+from transformers import pipeline
 
+# Load the GPT-2 model
+generator = pipeline("text-generation", model="distilgpt2")
+
+# Set up FastAPI app
 app = FastAPI()
 
-tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
-model = GPT2LMHeadModel.from_pretrained("openai-community/gpt2")
-
-class QueryInput(BaseModel):
+class TextInput(BaseModel):
     prompt: str
+    max_length: int = 50
 
 @app.post("/generate")
-def generate_text(data: QueryInput):
-    inputs = tokenizer.encode(data.prompt, return_tensors="pt")
-    outputs = model.generate(inputs, max_length=100, num_return_sequences=1)
-    text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return {"generated_text": text}
+def generate_text(input: TextInput):
+    result = generator(input.prompt, max_length=input.max_length, num_return_sequences=1)
+    return {"generated_text": result[0]["generated_text"]}
